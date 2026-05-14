@@ -115,8 +115,12 @@ function FullTexturedModel({
         const isHovered = hovered === part.id;
         const isSelected = selected === part.id;
         const isActive = isHovered || isSelected;
+        const hasActiveElement = hovered !== null || selected !== null;
         const isRight = hotspotPositions[part.id][0] >= 0;
         const sideClass = isRight ? 'right' : 'left';
+
+        const opacity = !hasActiveElement || isActive ? 1 : 0;
+        const pointerEvents = !hasActiveElement || isActive ? 'auto' : 'none';
 
         return (
           <group key={part.id} position={hotspotPositions[part.id]}>
@@ -126,7 +130,12 @@ function FullTexturedModel({
                 onMouseEnter={() => onHover(part.id)}
                 onMouseLeave={() => onHover(null)}
                 onClick={() => onSelect(part.id)}
-                style={{ cursor: 'pointer' }}
+                style={{ 
+                  cursor: 'pointer', 
+                  opacity, 
+                  pointerEvents: pointerEvents as any,
+                  transition: 'opacity 0.3s ease'
+                }}
               >
                 <div className={`anatomy-dot ${isActive ? 'hovered' : ''}`}></div>
 

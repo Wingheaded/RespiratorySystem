@@ -41,7 +41,7 @@ export default function App() {
   const initialPart = new URLSearchParams(window.location.search).get('parte') as PartId | null;
   const [mode, setMode] = useState<Mode>(path === '/exercicio' ? 'exercise' : 'explore');
   const [selected, setSelected] = useState<PartId | null>(
-    structures.some((part) => part.id === initialPart) ? initialPart : 'trachea'
+    structures.some((part) => part.id === initialPart) ? initialPart : null
   );
   const [hovered, setHovered] = useState<PartId | null>(null);
   const [viewMode, setViewMode] = useState<ViewMode>('normal');
