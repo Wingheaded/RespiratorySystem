@@ -127,7 +127,7 @@ function FullTexturedModel({
 
         return (
           <group key={part.id} position={hotspotPositions[part.id]}>
-            <Html center zIndexRange={[100, 0]}>
+            <Html center zIndexRange={isActive ? [200, 150] : [100, 0]}>
               <div
                 className="anatomy-hotspot-container"
                 onMouseEnter={() => onHover(part.id)}
@@ -159,7 +159,7 @@ function FullTexturedModel({
         );
       })}
       {!hoveredPart && selectedLabel && (
-        <Html position={[0, 1.32, 0]} center className="scene-label">
+        <Html position={[0, 1.32, 0]} center className="scene-label" zIndexRange={[50, 0]}>
           {selectedLabel}
         </Html>
       )}
