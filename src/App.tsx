@@ -15,11 +15,14 @@ import {
   X
 } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
+import ExerciseScene from './components/ExerciseScene';
 import RespiratoryScene from './components/RespiratoryScene';
 import { PartId, ViewMode, getStructure, structures } from './data/structures';
 
 type Mode = 'explore' | 'exercise';
 type LegalPage = 'aviso-legal' | 'creditos' | 'privacidade';
+type ExercisePhase = 'parts' | 'review' | 'labels' | 'complete';
+type DragItem = { kind: 'part' | 'label'; id: PartId } | null;
 
 const shuffled = () => [...structures].sort(() => Math.random() - 0.5);
 
@@ -59,10 +62,12 @@ export default function App() {
     () => localStorage.getItem('corpus3d.disclaimerAccepted') === 'true'
   );
   const [bank, setBank] = useState(shuffled);
-  const [placed, setPlaced] = useState<Set<PartId>>(new Set());
-  const [dragging, setDragging] = useState<PartId | null>(null);
-  const [feedback, setFeedback] = useState('Arrasta uma estrutura para a zona correta.');
-  const [mistakes, setMistakes] = useState<Record<string, number>>({});
+  const [exercisePhase, setExercisePhase] = useState<ExercisePhase>('parts');
+  const [placedParts, setPlacedParts] = useState<Set<PartId>>(new Set());
+  const [placedLabels, setPlacedLabels] = useState<Set<PartId>>(new Set());
+  const [dragging, setDragging] = useState<DragItem>(null);
+  const [feedback, setFeedback] = useState('Arrasta uma imagem para a zona correta.');
+  const [mistakes, setMistakes] = useState<Record<PartId, number>>({} as Record<PartId, number>);
   const [muted, setMuted] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const lastAudioUrl = useRef<string | null>(null);
@@ -86,8 +91,17 @@ export default function App() {
     const struct = getStructure(target);
     const url = struct?.audio || null;
 
-    if (url !== lastAudioUrl.current) {
-      playAudio(url || undefined);
+    if (muted || !url) {
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current.currentTime = 0;
+      }
+      lastAudioUrl.current = null;
+      return;
+    }
+
+    if (url !== lastAudioUrl.current || audioRef.current?.paused) {
+      playAudio(url);
       lastAudioUrl.current = url;
     }
   }, [hovered, selected, muted]);
@@ -111,23 +125,60 @@ export default function App() {
 
   const resetExercise = () => {
     setBank(shuffled());
-    setPlaced(new Set());
+    setExercisePhase('parts');
+    setPlacedParts(new Set());
+    setPlacedLabels(new Set());
     setDragging(null);
-    setMistakes({});
-    setFeedback('Nova ronda iniciada. Escolhe uma estrutura.');
+    setMistakes({} as Record<PartId, number>);
+    setFeedback('Nova ronda iniciada. Coloca primeiro as imagens nas zonas indicadas.');
   };
 
   const attemptDrop = (zoneId: PartId) => {
     if (!dragging) return;
-    if (zoneId === dragging) {
-      const part = getStructure(dragging);
-      setPlaced((prev) => new Set(prev).add(dragging));
-      setFeedback(`Excelente! ${part?.label} ficou no lugar certo.`);
+    const part = getStructure(dragging.id);
+    if (zoneId === dragging.id) {
+      if (dragging.kind === 'part') {
+        const next = new Set(placedParts).add(dragging.id);
+        setPlacedParts(next);
+        if (next.size === structures.length) {
+          setExercisePhase('review');
+          setFeedback('Muito bem! Observa o sistema montado e continua quando estiveres pronto.');
+        } else {
+          setFeedback(`Excelente! ${part?.label} ficou no lugar certo.`);
+        }
+      } else {
+        const next = new Set(placedLabels).add(dragging.id);
+        setPlacedLabels(next);
+        if (next.size === structures.length) {
+          setExercisePhase('complete');
+          setFeedback('Sistema Respiratorio Reconstruido!');
+        } else {
+          setFeedback(`Certo! A etiqueta ${part?.label} ficou ligada ao local correto.`);
+        }
+      }
     } else {
-      setMistakes((prev) => ({ ...prev, [dragging]: (prev[dragging] ?? 0) + 1 }));
-      setFeedback('Ainda nao e esse lugar. Observa a forma e tenta novamente.');
+      setMistakes((prev) => ({ ...prev, [dragging.id]: (prev[dragging.id] ?? 0) + 1 }));
+      setFeedback(
+        dragging.kind === 'part'
+          ? 'Ainda nao e esse lugar. Observa a forma e tenta novamente.'
+          : 'Essa etiqueta pertence a outra zona. Compara com o modelo montado.'
+      );
     }
     setDragging(null);
+  };
+
+  const selectExerciseTarget = (zoneId: PartId) => {
+    if (dragging) {
+      attemptDrop(zoneId);
+      return;
+    }
+    selectPart(zoneId);
+  };
+
+  const continueToLabels = () => {
+    setExercisePhase('labels');
+    setDragging(null);
+    setFeedback('Agora arrasta os nomes para as etiquetas corretas.');
   };
 
   if (['/aviso-legal', '/creditos', '/privacidade'].includes(path)) {
@@ -201,7 +252,14 @@ export default function App() {
             </div>
           </>
         ) : (
-          <ExerciseBank bank={bank} placed={placed} dragging={dragging} onDrag={setDragging} />
+          <ExerciseBank
+            bank={bank}
+            phase={exercisePhase}
+            placedParts={placedParts}
+            placedLabels={placedLabels}
+            dragging={dragging}
+            onDrag={setDragging}
+          />
         )}
       </aside>
 
@@ -223,16 +281,38 @@ export default function App() {
                 ghost={ghost}
                 autoRotate={autoRotate}
                 breathing={breathing}
+                visible={accepted}
               />
             )}
           </>
         ) : (
-          <ExerciseStage placed={placed} dragging={dragging} onDrop={attemptDrop} onSelect={selectPart} />
+          <ExerciseScene
+            phase={exercisePhase}
+            placedParts={placedParts}
+            placedLabels={placedLabels}
+            dragging={dragging}
+            highlightedId={dragging && (mistakes[dragging.id] ?? 0) >= 3 ? dragging.id : null}
+            onDrop={attemptDrop}
+            onSelectTarget={selectExerciseTarget}
+          />
         )}
       </main>
 
       <aside className="right-panel">
-        {mode === 'explore' ? <InfoPanel active={active} /> : <ScorePanel placed={placed} mistakes={mistakes} feedback={feedback} onReset={resetExercise} dragging={dragging} />}
+        {mode === 'explore' ? (
+          <InfoPanel active={active} />
+        ) : (
+          <ScorePanel
+            phase={exercisePhase}
+            placedParts={placedParts}
+            placedLabels={placedLabels}
+            mistakes={mistakes}
+            feedback={feedback}
+            onReset={resetExercise}
+            onContinue={continueToLabels}
+            dragging={dragging}
+          />
+        )}
       </aside>
 
 
@@ -388,95 +468,102 @@ function ComparePanel() {
 
 function ExerciseBank({
   bank,
-  placed,
+  phase,
+  placedParts,
+  placedLabels,
   dragging,
   onDrag
 }: {
   bank: typeof structures;
-  placed: Set<PartId>;
-  dragging: PartId | null;
-  onDrag: (id: PartId | null) => void;
+  phase: ExercisePhase;
+  placedParts: Set<PartId>;
+  placedLabels: Set<PartId>;
+  dragging: DragItem;
+  onDrag: (item: DragItem) => void;
 }) {
+  const partsOpen = phase === 'parts';
+  const labelsOpen = phase === 'labels';
+  const title = partsOpen ? 'Banco de Imagens' : labelsOpen ? 'Banco de Etiquetas' : 'Sistema Montado';
+  const subtitle = partsOpen ? 'Completa o esquema' : labelsOpen ? 'Nomeia as partes' : 'Observa antes de continuar';
+  const visibleItems = bank.filter((part) => {
+    if (partsOpen) return !placedParts.has(part.id);
+    if (labelsOpen) return !placedLabels.has(part.id);
+    return false;
+  });
+  const startDrag = (part: (typeof structures)[number]) => (event?: React.DragEvent<HTMLButtonElement>) => {
+    const item: DragItem = { kind: partsOpen ? 'part' : 'label', id: part.id };
+    event?.dataTransfer.setData('text/plain', part.id);
+    event?.dataTransfer.setData('application/corpus3d-kind', item.kind);
+    onDrag(item);
+  };
+
   return (
     <>
-      <PanelTitle title="Banco de Componentes" subtitle="Monta o sistema" />
-      <div className="part-list">
-        {bank.map((part) => (
+      <PanelTitle title={title} subtitle={subtitle} />
+      <div className={partsOpen ? 'part-list image-bank' : 'part-list label-bank'}>
+        {visibleItems.map((part) => (
           <button
             key={part.id}
-            className={dragging === part.id ? 'part-row active' : placed.has(part.id) ? 'part-row done' : 'part-row'}
-            disabled={placed.has(part.id)}
-            draggable={!placed.has(part.id)}
-            onDragStart={() => onDrag(part.id)}
-            onClick={() => onDrag(part.id)}
+            className={dragging?.id === part.id ? 'part-row active' : 'part-row'}
+            draggable
+            onDragStart={startDrag(part)}
+            onDragEnd={() => onDrag(null)}
+            onClick={() => onDrag({ kind: partsOpen ? 'part' : 'label', id: part.id })}
+            aria-label={partsOpen ? `Arrastar imagem ${part.label}` : `Arrastar etiqueta ${part.label}`}
           >
-            <img className="part-thumb" src={part.image} alt="" />
-            <span>{part.label}</span>
-            {placed.has(part.id) && <Check size={16} />}
+            {partsOpen ? (
+              <img className="part-thumb" src={part.image} alt="" />
+            ) : (
+              <span className="label-chip-dot" style={{ background: part.color }} />
+            )}
+            {!partsOpen && <span>{part.label}</span>}
           </button>
         ))}
+        {visibleItems.length === 0 && (
+          <div className="bank-empty">
+            <Check size={18} />
+            <span>
+              {phase === 'complete'
+                ? 'Exercicio completo.'
+                : phase === 'review'
+                  ? 'Imagens colocadas corretamente.'
+                  : 'Tudo colocado. Passa para as etiquetas.'}
+            </span>
+          </div>
+        )}
       </div>
     </>
   );
 }
 
-function ExerciseStage({
-  placed,
-  dragging,
-  onDrop,
-  onSelect
-}: {
-  placed: Set<PartId>;
-  dragging: PartId | null;
-  onDrop: (id: PartId) => void;
-  onSelect: (id: PartId) => void;
-}) {
-  return (
-    <div className="exercise-stage">
-      <div className="blueprint">
-        {structures.map((part) => (
-          <button
-            key={part.id}
-            className={placed.has(part.id) ? 'drop-zone placed' : dragging ? 'drop-zone ready' : 'drop-zone'}
-            style={{
-              left: `${50 + part.position[0] * 20}%`,
-              top: `${48 - part.position[1] * 14}%`,
-              borderColor: part.color
-            }}
-            onDragOver={(event) => event.preventDefault()}
-            onDrop={() => onDrop(part.id)}
-            onClick={() => (dragging ? onDrop(part.id) : onSelect(part.id))}
-            aria-label={`Zona ${part.label}`}
-          >
-            {placed.has(part.id) ? <Check size={16} /> : ''}
-          </button>
-        ))}
-      </div>
-    </div>
-  );
-}
-
 function ScorePanel({
-  placed,
+  phase,
+  placedParts,
+  placedLabels,
   mistakes,
   feedback,
   onReset,
+  onContinue,
   dragging
 }: {
-  placed: Set<PartId>;
-  mistakes: Record<string, number>;
+  phase: ExercisePhase;
+  placedParts: Set<PartId>;
+  placedLabels: Set<PartId>;
+  mistakes: Record<PartId, number>;
   feedback: string;
   onReset: () => void;
-  dragging: PartId | null;
+  onContinue: () => void;
+  dragging: DragItem;
 }) {
-  const score = placed.size;
+  const score = phase === 'parts' || phase === 'review' ? placedParts.size : placedLabels.size;
+  const label = phase === 'parts' || phase === 'review' ? 'imagens' : 'nomes';
   const totalMistakes = Object.values(mistakes).reduce((sum, value) => sum + value, 0);
-  const activeMistakes = dragging ? mistakes[dragging] ?? 0 : 0;
-  const complete = score === structures.length;
+  const activeMistakes = dragging ? mistakes[dragging.id] ?? 0 : 0;
+  const complete = phase === 'complete';
   return (
     <div className="info-stack">
       <div className="title-card">
-        <h1>{score} / {structures.length} corretos</h1>
+        <h1>{complete ? structures.length : score} / {structures.length} {label}</h1>
         <div className="progress">
           <span style={{ width: `${(score / structures.length) * 100}%` }} />
         </div>
@@ -484,12 +571,17 @@ function ScorePanel({
       </div>
       <div className="data-card">
         <dl>
+          <dt>Fase</dt>
+          <dd>{phase === 'parts' ? 'Imagens' : phase === 'review' ? 'Revisao' : phase === 'labels' ? 'Etiquetas' : 'Completo'}</dd>
           <dt>Erros</dt>
           <dd>{totalMistakes}</dd>
           <dt>Hint</dt>
           <dd>{activeMistakes >= 3 ? 'Disponivel: procura a zona a pulsar.' : 'Desbloqueia apos 3 tentativas.'}</dd>
         </dl>
       </div>
+      {phase === 'review' && (
+        <button className="primary-action" onClick={onContinue}>Continuar para nomes</button>
+      )}
       <button className="primary-action" onClick={onReset}>Reiniciar exercicio</button>
     </div>
   );

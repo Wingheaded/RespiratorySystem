@@ -15,6 +15,7 @@ interface SceneProps {
   ghost: boolean;
   autoRotate: boolean;
   breathing: boolean;
+  visible?: boolean;
 }
 
 function cloneWithMaterial(scene: Object3D, part: Structure, active: boolean, viewMode: ViewMode, muted: boolean) {
@@ -54,7 +55,8 @@ function FullTexturedModel({
   onSelect,
   onHover,
   autoRotate,
-  breathing
+  breathing,
+  visible
 }: {
   selected: PartId | null;
   hovered: PartId | null;
@@ -62,6 +64,7 @@ function FullTexturedModel({
   onHover: (id: PartId | null) => void;
   autoRotate: boolean;
   breathing: boolean;
+  visible?: boolean;
 }) {
   const group = useRef<Group>(null);
   const baseScale = 2.57;
@@ -111,7 +114,7 @@ function FullTexturedModel({
   return (
     <group ref={group} position={[0, -0.05, 0]} scale={baseScale}>
       <primitive object={clone} />
-      {structures.map((part) => {
+      {visible !== false && structures.map((part) => {
         const isHovered = hovered === part.id;
         const isSelected = selected === part.id;
         const isActive = isHovered || isSelected;
@@ -122,8 +125,9 @@ function FullTexturedModel({
         const isRight = hotspotPositions[part.id][0] >= 0;
         const sideClass = isRight ? 'right' : 'left';
 
-        const opacity = !hasHoveredElement || isHovered ? 1 : 0;
-        const pointerEvents = !hasHoveredElement || isHovered ? 'auto' : 'none';
+        const hasActiveElement = hovered !== null || selected !== null;
+        const opacity = !hasActiveElement ? 1 : isActive ? 1 : 0.05;
+        const pointerEvents = !hasActiveElement || isActive ? 'auto' : 'none';
 
         return (
           <group key={part.id} position={hotspotPositions[part.id]}>
@@ -251,6 +255,7 @@ function SceneContent(props: SceneProps) {
           onHover={props.onHover}
           autoRotate={props.autoRotate}
           breathing={props.breathing}
+          visible={props.visible}
         />
       ) : (
         <group ref={root} position={[0, -0.55, 0]}>
