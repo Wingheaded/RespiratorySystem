@@ -622,7 +622,12 @@ function LegalPageView({ page, onBack }: { page: LegalPage; onBack: () => void }
       return {
         title: 'Creditos e Atribuicoes',
         body: [
-          'Modelos 3D: gerados por IA para este projeto por Jose Antonio Luanda. Sem licencas externas necessarias.',
+          <span key="credits">
+            Modelos 3D: gerados por IA para este projeto por{' '}
+            <a href="http://jose-ai-solutions.web.app/" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent)', textDecoration: 'underline' }}>
+              Jose-AI-Solutions
+            </a>. Sem licencas externas necessarias.
+          </span>,
           'Video local: fornecido na pasta Assets do projeto.',
           'Software: React, Vite, Three.js, React Three Fiber, Drei e Lucide.'
         ]
@@ -645,8 +650,8 @@ function LegalPageView({ page, onBack }: { page: LegalPage; onBack: () => void }
       </button>
       <article>
         <h1>{content.title}</h1>
-        {content.body.map((paragraph) => (
-          <p key={paragraph}>{paragraph}</p>
+        {content.body.map((paragraph, idx) => (
+          <p key={idx}>{paragraph}</p>
         ))}
         <small>Ultima atualizacao: 14/05/2026 · Versao da aplicacao: 0.1.0</small>
       </article>
