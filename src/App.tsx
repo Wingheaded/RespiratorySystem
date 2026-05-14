@@ -137,39 +137,42 @@ export default function App() {
   return (
     <div className="app-shell">
       <header className="topbar">
-        <div className="topbar-left" style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-          <button className="brand" onClick={() => navigate('/explorar')} aria-label="Ir para explorar">
-            <span className="brand-mark">R3D</span>
-            <span>
-              <strong>Respira3D</strong>
-              <small>Corpus3D</small>
-            </span>
+        <div className="topbar-left">
+          <button className="brand-logo" onClick={() => navigate('/explorar')} aria-label="Ir para explorar">
+            <img src="/images/LogoCorpus3D.png" alt="Corpus3D" className="nav-logo" />
           </button>
           <NavHelpDropdown />
         </div>
-        {mode === 'explore' && (
-          <div className="view-switch">
-            <button
-              className={viewMode === 'normal' ? 'seg active' : 'seg'}
-              onClick={() => setViewMode('normal')}
-            >
-              Atlas
+
+        <div className="topbar-center">
+          <img src="/images/LogoRespira3d_01.png" alt="Respira3D" className="nav-logo-center" />
+        </div>
+
+        <div className="topbar-actions">
+          {mode === 'explore' && (
+            <div className="view-switch-inline">
+              <button
+                className={viewMode === 'normal' ? 'seg active' : 'seg'}
+                onClick={() => setViewMode('normal')}
+              >
+                Atlas
+              </button>
+              <button
+                className={viewMode === 'xray' ? 'seg active' : 'seg'}
+                onClick={() => setViewMode('xray')}
+              >
+                Raio-X
+              </button>
+            </div>
+          )}
+          <div className="mode-switch">
+            <button className={mode === 'explore' ? 'seg active' : 'seg'} onClick={() => switchMode('explore')}>
+              Explorar
             </button>
-            <button
-              className={viewMode === 'xray' ? 'seg active' : 'seg'}
-              onClick={() => setViewMode('xray')}
-            >
-              Raio-X
+            <button className={mode === 'exercise' ? 'seg active' : 'seg'} onClick={() => switchMode('exercise')}>
+              Exercicio
             </button>
           </div>
-        )}
-        <div className="topbar-actions">
-          <button className={mode === 'explore' ? 'seg active' : 'seg'} onClick={() => switchMode('explore')}>
-            Explorar
-          </button>
-          <button className={mode === 'exercise' ? 'seg active' : 'seg'} onClick={() => switchMode('exercise')}>
-            Exercicio
-          </button>
           <button 
             className={muted ? 'icon-button active' : 'icon-button'} 
             aria-label={muted ? "Ativar som" : "Desativar som"}

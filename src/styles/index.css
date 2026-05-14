@@ -61,33 +61,58 @@ button:disabled {
   z-index: 100;
 }
 
-.brand {
+.topbar-left {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 16px;
+}
+
+.topbar-center {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  pointer-events: none;
+}
+
+.brand-logo {
+  display: flex;
+  align-items: center;
   background: transparent;
-  text-align: left;
+  padding: 0;
 }
 
-.brand-mark {
-  display: grid;
-  width: 42px;
-  height: 42px;
-  place-items: center;
-  border: 1px solid rgba(255, 255, 255, 0.28);
+.nav-logo {
+  height: 38px;
+  width: auto;
+  object-fit: contain;
+  filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));
+}
+
+.nav-logo-center {
+  height: 44px;
+  width: auto;
+  object-fit: contain;
+  filter: drop-shadow(0 4px 8px rgba(0,0,0,0.3));
+}
+
+.view-switch-inline {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  background: rgba(255, 255, 255, 0.04);
+  padding: 2px;
   border-radius: 10px;
-  background: linear-gradient(135deg, #d7f7ff, #4ec6cc 45%, #2d7682);
-  color: #08202b;
-  font-weight: 900;
-  letter-spacing: 0;
+  border: 1px solid var(--line);
 }
 
-.brand strong,
-.brand small {
-  display: block;
+.mode-switch {
+  display: flex;
+  align-items: center;
+  gap: 4px;
 }
 
-.brand small,
 .panel-title small,
 .footer,
 .data-card dt {
@@ -97,11 +122,13 @@ button:disabled {
 
 .topbar-actions,
 .view-switch,
+.view-switch-inline,
+.mode-switch,
 .tabs,
 .modal-actions {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 12px;
 }
 
 .seg,
