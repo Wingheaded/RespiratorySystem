@@ -87,16 +87,16 @@ function FullTexturedModel({
   const selectedLabel = structures.find((part) => part.id === selected)?.label;
   const hoveredPart = structures.find((part) => part.id === hovered);
   const hotspotPositions: Record<PartId, [number, number, number]> = {
-    nasal: [-0.075, 0.335, 0.000],
-    pharynx: [0.045, 0.225, 0.000],
-    larynx: [-0.040, 0.135, 0.050],
-    trachea: [-0.035, 0.040, 0.065],
-    'main-bronchi': [0.050, -0.055, 0.080],
-    bronchioles: [0.120, -0.220, 0.100],
-    'left-lung': [0.220, -0.130, 0.120],
-    alveoli: [0.210, -0.280, 0.120],
-    'right-lung': [-0.220, -0.210, 0.120],
-    diaphragm: [-0.220, -0.450, 0.150]
+    nasal: [-0.050, 0.300, 0.000],
+    pharynx: [0.040, 0.230, 0.000],
+    larynx: [-0.015, 0.090, 0.050],
+    trachea: [0.000, -0.010, 0.065],
+    'main-bronchi': [0.020, -0.120, 0.080],
+    bronchioles: [0.100, -0.250, 0.100],
+    'right-lung': [-0.230, -0.160, 0.120],
+    'left-lung': [0.230, -0.220, 0.120],
+    alveoli: [0.150, -0.320, 0.120],
+    diaphragm: [-0.120, -0.430, 0.150]
   };
 
   useFrame(({ clock }, delta) => {
