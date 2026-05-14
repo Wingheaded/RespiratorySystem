@@ -1,0 +1,11 @@
+{
+  "name": "Respira3D - Sistema Respiratorio",
+  "short_name": "Respira3D",
+  "description": "Explorador educativo 3D do sistema respiratorio.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#102533",
+  "theme_color": "#102533",
+  "lang": "pt-PT",
+  "icons": []
+}
