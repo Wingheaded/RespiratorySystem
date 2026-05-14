@@ -40,9 +40,13 @@ export default function App() {
   const { path, navigate } = usePath();
   const initialPart = new URLSearchParams(window.location.search).get('parte') as PartId | null;
   const [mode, setMode] = useState<Mode>(path === '/exercicio' ? 'exercise' : 'explore');
-  const [selected, setSelected] = useState<PartId | null>(
-    structures.some((part) => part.id === initialPart) ? initialPart : null
-  );
+  const [selected, setSelected] = useState<PartId | null>(null);
+
+  useEffect(() => {
+    if (initialPart) {
+      window.history.replaceState({}, '', '/explorar');
+    }
+  }, []);
   const [hovered, setHovered] = useState<PartId | null>(null);
   const [viewMode, setViewMode] = useState<ViewMode>('normal');
   const [displayMode, setDisplayMode] = useState<DisplayMode>('atlas');

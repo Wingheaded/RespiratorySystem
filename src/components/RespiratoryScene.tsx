@@ -115,12 +115,15 @@ function FullTexturedModel({
         const isHovered = hovered === part.id;
         const isSelected = selected === part.id;
         const isActive = isHovered || isSelected;
-        const hasActiveElement = hovered !== null || selected !== null;
+        
+        // Only hide other dots when actively hovering over one
+        const hasHoveredElement = hovered !== null;
+        
         const isRight = hotspotPositions[part.id][0] >= 0;
         const sideClass = isRight ? 'right' : 'left';
 
-        const opacity = !hasActiveElement || isActive ? 1 : 0;
-        const pointerEvents = !hasActiveElement || isActive ? 'auto' : 'none';
+        const opacity = !hasHoveredElement || isHovered ? 1 : 0;
+        const pointerEvents = !hasHoveredElement || isHovered ? 'auto' : 'none';
 
         return (
           <group key={part.id} position={hotspotPositions[part.id]}>
