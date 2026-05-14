@@ -722,3 +722,138 @@ button:disabled {
     display: none;
   }
 }
+
+/* Anatomy Hotspot Styles */
+.anatomy-hotspot-container {
+  position: relative;
+}
+
+.anatomy-dot {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 16px;
+  height: 16px;
+  background: #fff;
+  border: 4px solid #7480ff;
+  border-radius: 50%;
+  box-shadow: 0 0 0 4px rgba(116, 128, 255, 0.2);
+  transition: all 0.2s ease;
+  pointer-events: auto;
+}
+
+.anatomy-dot.hovered {
+  width: 20px;
+  height: 20px;
+  box-shadow: 0 0 0 6px rgba(116, 128, 255, 0.3);
+}
+
+.anatomy-label {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  background: #fff;
+  color: #556270;
+  padding: 8px 14px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+  white-space: nowrap;
+  pointer-events: none;
+  transition: opacity 0.2s;
+}
+
+.anatomy-label::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  width: 26px;
+  height: 2px;
+  background: #d0d7de;
+}
+
+.anatomy-label.right {
+  left: 28px;
+}
+.anatomy-label.right::before {
+  right: 100%;
+}
+
+.anatomy-label.left {
+  right: 28px;
+}
+.anatomy-label.left::before {
+  left: 100%;
+}
+
+.anatomy-card {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  background: #fff;
+  border-radius: 12px;
+  padding: 16px;
+  width: 260px;
+  box-shadow: 0 10px 30px rgba(116, 128, 255, 0.15);
+  border: 1px solid rgba(116, 128, 255, 0.2);
+  pointer-events: none;
+  z-index: 100;
+}
+
+.anatomy-card::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  width: 32px;
+  height: 2px;
+  background: #d0d7de;
+}
+
+.anatomy-card.right {
+  left: 36px;
+}
+.anatomy-card.right::before {
+  right: 100%;
+}
+
+.anatomy-card.left {
+  right: 36px;
+}
+.anatomy-card.left::before {
+  left: 100%;
+}
+
+.anatomy-card-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.anatomy-card-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: #f0f3ff;
+  border: 1px solid #e0e6ff;
+  color: #7480ff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.anatomy-card-title {
+  color: #613ce8;
+  font-size: 16px;
+  font-weight: 700;
+  margin: 0;
+}
+
+.anatomy-card-desc {
+  color: #6b7280;
+  font-size: 13px;
+  line-height: 1.45;
+  margin: 0;
+}

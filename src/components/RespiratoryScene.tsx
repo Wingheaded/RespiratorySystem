@@ -1,5 +1,6 @@
 import { Html, OrbitControls, useGLTF } from '@react-three/drei';
 import { Canvas, useFrame, ThreeEvent } from '@react-three/fiber';
+import { Activity } from 'lucide-react';
 import { Suspense, useMemo, useRef } from 'react';
 import { DoubleSide, Group, Mesh, MeshStandardMaterial, Object3D } from 'three';
 import { PartId, Structure, ViewMode, structures } from '../data/structures';
@@ -86,16 +87,16 @@ function FullTexturedModel({
   const selectedLabel = structures.find((part) => part.id === selected)?.label;
   const hoveredPart = structures.find((part) => part.id === hovered);
   const hotspotPositions: Record<PartId, [number, number, number]> = {
-    nasal: [0, 0.327, -0.069],
-    pharynx: [0, 0.266, 0.059],
-    larynx: [0, 0.106, 0.050],
-    trachea: [0, 0.040, 0.065],
-    'main-bronchi': [0, -0.100, 0.080],
-    bronchioles: [0.080, -0.200, 0.100],
-    alveoli: [0.136, -0.330, 0.116],
-    'right-lung': [-0.128, -0.280, 0.120],
-    'left-lung': [0.136, -0.280, 0.120],
-    diaphragm: [0, -0.428, 0.150]
+    nasal: [-0.050, 0.330, 0.000],
+    pharynx: [0.035, 0.250, 0.000],
+    larynx: [-0.025, 0.115, 0.050],
+    trachea: [-0.025, 0.045, 0.065],
+    'main-bronchi': [0.030, -0.050, 0.080],
+    bronchioles: [0.080, -0.150, 0.100],
+    alveoli: [0.190, -0.320, 0.120],
+    'right-lung': [-0.200, -0.200, 0.120],
+    'left-lung': [0.200, -0.180, 0.120],
+    diaphragm: [-0.200, -0.450, 0.150]
   };
 
   useFrame(({ clock }, delta) => {
@@ -110,40 +111,39 @@ function FullTexturedModel({
   return (
     <group ref={group} position={[0, 0.5, 0]} scale={baseScale}>
       <primitive object={clone} />
-      {structures.map((part) => (
-        <group key={part.id} position={hotspotPositions[part.id]}>
-          <mesh
-            onClick={(event) => {
-              event.stopPropagation();
-              onSelect(part.id);
-            }}
-            onPointerOver={(event) => {
-              event.stopPropagation();
-              document.body.style.cursor = 'pointer';
-              onHover(part.id);
-            }}
-            onPointerOut={() => {
-              document.body.style.cursor = '';
-              onHover(null);
-            }}
-          >
-            <sphereGeometry args={[selected === part.id || hovered === part.id ? 0.028 : 0.018, 24, 24]} />
-            <meshStandardMaterial
-              color={part.color}
-              emissive={part.color}
-              emissiveIntensity={hovered === part.id ? 0.8 : 0.35}
-              transparent
-              opacity={hovered === part.id || selected === part.id ? 0.9 : 0.38}
-            />
-          </mesh>
-        </group>
-      ))}
-      {hoveredPart && (
-        <Html position={hotspotPositions[hoveredPart.id]} center className="hover-card">
-          <strong>{hoveredPart.label}</strong>
-          <span>{hoveredPart.shortDescription}</span>
-        </Html>
-      )}
+      {structures.map((part) => {
+        const isHovered = hovered === part.id;
+        const isRight = hotspotPositions[part.id][0] >= 0;
+        const sideClass = isRight ? 'right' : 'left';
+
+        return (
+          <group key={part.id} position={hotspotPositions[part.id]}>
+            <Html center zIndexRange={[100, 0]}>
+              <div 
+                className="anatomy-hotspot-container"
+                onMouseEnter={() => onHover(part.id)}
+                onMouseLeave={() => onHover(null)}
+                onClick={() => onSelect(part.id)}
+                style={{ cursor: 'pointer' }}
+              >
+                <div className={`anatomy-dot ${isHovered ? 'hovered' : ''}`}></div>
+                
+                {isHovered && (
+                  <div className={`anatomy-card ${sideClass}`}>
+                    <div className="anatomy-card-header">
+                      <div className="anatomy-card-icon">
+                        <Activity size={20} />
+                      </div>
+                      <h4 className="anatomy-card-title">{part.label}</h4>
+                    </div>
+                    <p className="anatomy-card-desc">{part.shortDescription}</p>
+                  </div>
+                )}
+              </div>
+            </Html>
+          </group>
+        );
+      })}
       {!hoveredPart && selectedLabel && (
         <Html position={[0, 1.32, 0]} center className="scene-label">
           {selectedLabel}
