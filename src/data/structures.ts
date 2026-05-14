@@ -10,13 +10,14 @@ export type PartId =
   | 'left-lung'
   | 'diaphragm';
 
-export type ViewMode = 'normal' | 'section' | 'xray';
+export type ViewMode = 'normal' | 'xray';
 
 export interface Structure {
   id: PartId;
   label: string;
   model: string;
   image: string;
+  audio?: string;
   color: string;
   shortDescription: string;
   size: string;
@@ -35,6 +36,7 @@ export const structures: Structure[] = [
     label: 'Cavidade Nasal',
     model: '/models/nasalCavity.glb',
     image: '/images/anatomy/NasalCavity.png',
+    audio: '/audio/NasalCavity.wav',
     color: '#d98264',
     shortDescription: 'Entrada do ar, onde este e filtrado, aquecido e humedecido.',
     size: 'Cerca de 7 cm de profundidade',
@@ -51,6 +53,7 @@ export const structures: Structure[] = [
     label: 'Faringe',
     model: '/models/Pharynx.glb',
     image: '/images/anatomy/Pharynx.png',
+    audio: '/audio/Pharynx.wav',
     color: '#c85e64',
     shortDescription: 'Passagem comum ao ar e aos alimentos, situada atras da boca e do nariz.',
     size: 'Aprox. 12 a 14 cm',
@@ -67,6 +70,7 @@ export const structures: Structure[] = [
     label: 'Laringe',
     model: '/models/larynx.glb',
     image: '/images/anatomy/larynx.png',
+    audio: '/audio/Larynx.wav',
     color: '#dec293',
     shortDescription: 'Estrutura onde se encontram as cordas vocais.',
     size: 'Aprox. 4 a 5 cm',
@@ -83,6 +87,7 @@ export const structures: Structure[] = [
     label: 'Traqueia',
     model: '/models/Trachea.glb',
     image: '/images/anatomy/trachea.png',
+    audio: '/audio/Trachea.wav',
     color: '#89b8d0',
     shortDescription: 'Tubo que liga a laringe aos bronquios.',
     size: 'Aprox. 10 a 12 cm em adultos',
@@ -99,6 +104,7 @@ export const structures: Structure[] = [
     label: 'Bronquios Principais',
     model: '/models/MainBronchi.glb',
     image: '/images/anatomy/MainBronchi.png',
+    audio: '/audio/MainBronchi.wav',
     color: '#73bfb1',
     shortDescription: 'Dois tubos que levam o ar da traqueia para cada pulmao.',
     size: 'Alguns centimetros cada',
@@ -115,6 +121,7 @@ export const structures: Structure[] = [
     label: 'Bronquiolos',
     model: '/models/Bronchioles.glb',
     image: '/images/anatomy/Bronchioles.png',
+    audio: '/audio/Bronchioles.wav',
     color: '#d9b85f',
     shortDescription: 'Ramificacoes muito finas dentro dos pulmoes.',
     size: 'Menos de 1 mm de diametro nos ramos pequenos',
@@ -131,6 +138,7 @@ export const structures: Structure[] = [
     label: 'Alveolos',
     model: '/models/Alvioli.glb',
     image: '/images/anatomy/Alvioli.png',
+    audio: '/audio/Alvioli.wav',
     color: '#c76893',
     shortDescription: 'Pequenos sacos onde o oxigenio entra no sangue.',
     size: 'Muito pequenos; existem milhoes',
@@ -147,6 +155,7 @@ export const structures: Structure[] = [
     label: 'Pulmao Direito',
     model: '/models/RightLung.glb',
     image: '/images/anatomy/RightLung.png',
+    audio: '/audio/RightLung.wav',
     color: '#d97979',
     shortDescription: 'Pulmao com tres lobos, situado do lado direito do torax.',
     size: 'Maior do que o pulmao esquerdo',
@@ -164,6 +173,7 @@ export const structures: Structure[] = [
     label: 'Pulmao Esquerdo',
     model: '/models/LeftLung.glb',
     image: '/images/anatomy/LeftLung.png',
+    audio: '/audio/LeftLung.wav',
     color: '#d97979',
     shortDescription: 'Pulmao com dois lobos, junto ao coracao.',
     size: 'Um pouco menor do que o direito',
@@ -181,6 +191,7 @@ export const structures: Structure[] = [
     label: 'Diafragma',
     model: '/models/Dyaphragm.glb',
     image: '/images/anatomy/Dyaphragm.png',
+    audio: '/audio/Dyaphragm.wav',
     color: '#c95742',
     shortDescription: 'Musculo principal da respiracao.',
     size: 'Forma de cupula sob os pulmoes',

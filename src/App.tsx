@@ -3,6 +3,7 @@ import {
   Check,
   Eye,
   EyeOff,
+  HelpCircle,
   Info,
   Move3D,
   RefreshCcw,
@@ -10,15 +11,15 @@ import {
   ScanLine,
   Sparkles,
   Volume2,
+  VolumeX,
   X
 } from 'lucide-react';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import RespiratoryScene from './components/RespiratoryScene';
 import { PartId, ViewMode, getStructure, structures } from './data/structures';
 
 type Mode = 'explore' | 'exercise';
 type LegalPage = 'aviso-legal' | 'creditos' | 'privacidade';
-type DisplayMode = 'atlas' | 'image';
 
 const shuffled = () => [...structures].sort(() => Math.random() - 0.5);
 
@@ -49,7 +50,6 @@ export default function App() {
   }, []);
   const [hovered, setHovered] = useState<PartId | null>(null);
   const [viewMode, setViewMode] = useState<ViewMode>('normal');
-  const [displayMode, setDisplayMode] = useState<DisplayMode>('atlas');
   const [autoRotate, setAutoRotate] = useState(false);
   const [isolate, setIsolate] = useState(false);
   const [ghost, setGhost] = useState(false);
@@ -63,16 +63,45 @@ export default function App() {
   const [dragging, setDragging] = useState<PartId | null>(null);
   const [feedback, setFeedback] = useState('Arrasta uma estrutura para a zona correta.');
   const [mistakes, setMistakes] = useState<Record<string, number>>({});
+  const [muted, setMuted] = useState(false);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const lastAudioUrl = useRef<string | null>(null);
+
   const active = getStructure(hovered ?? selected);
   const legal = path.slice(1) as LegalPage;
+
+  const playAudio = (url?: string) => {
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.currentTime = 0;
+    }
+    if (url && !muted) {
+      audioRef.current = new Audio(url);
+      audioRef.current.play().catch((e) => console.log('Audio pending user interaction or error:', e));
+    }
+  };
+
+  useEffect(() => {
+    const target = hovered || selected;
+    const struct = getStructure(target);
+    const url = struct?.audio || null;
+
+    if (url !== lastAudioUrl.current) {
+      playAudio(url || undefined);
+      lastAudioUrl.current = url;
+    }
+  }, [hovered, selected, muted]);
 
   useEffect(() => {
     setMode(path === '/exercicio' ? 'exercise' : 'explore');
   }, [path]);
 
-  const selectPart = (id: PartId) => {
+  const selectPart = (id: PartId | null) => {
     setSelected(id);
-    if (mode === 'explore') window.history.replaceState({}, '', `/explorar?parte=${id}`);
+    if (mode === 'explore') {
+      const url = id ? `/explorar?parte=${id}` : '/explorar';
+      window.history.replaceState({}, '', url);
+    }
   };
 
   const switchMode = (next: Mode) => {
@@ -108,13 +137,32 @@ export default function App() {
   return (
     <div className="app-shell">
       <header className="topbar">
-        <button className="brand" onClick={() => navigate('/explorar')} aria-label="Ir para explorar">
-          <span className="brand-mark">R3D</span>
-          <span>
-            <strong>Respira3D</strong>
-            <small>Corpus3D</small>
-          </span>
-        </button>
+        <div className="topbar-left" style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+          <button className="brand" onClick={() => navigate('/explorar')} aria-label="Ir para explorar">
+            <span className="brand-mark">R3D</span>
+            <span>
+              <strong>Respira3D</strong>
+              <small>Corpus3D</small>
+            </span>
+          </button>
+          <NavHelpDropdown />
+        </div>
+        {mode === 'explore' && (
+          <div className="view-switch">
+            <button
+              className={viewMode === 'normal' ? 'seg active' : 'seg'}
+              onClick={() => setViewMode('normal')}
+            >
+              Atlas
+            </button>
+            <button
+              className={viewMode === 'xray' ? 'seg active' : 'seg'}
+              onClick={() => setViewMode('xray')}
+            >
+              Raio-X
+            </button>
+          </div>
+        )}
         <div className="topbar-actions">
           <button className={mode === 'explore' ? 'seg active' : 'seg'} onClick={() => switchMode('explore')}>
             Explorar
@@ -122,8 +170,12 @@ export default function App() {
           <button className={mode === 'exercise' ? 'seg active' : 'seg'} onClick={() => switchMode('exercise')}>
             Exercicio
           </button>
-          <button className="icon-button" aria-label="Som">
-            <Volume2 size={18} />
+          <button 
+            className={muted ? 'icon-button active' : 'icon-button'} 
+            aria-label={muted ? "Ativar som" : "Desativar som"}
+            onClick={() => setMuted(!muted)}
+          >
+            {muted ? <VolumeX size={18} /> : <Volume2 size={18} />}
           </button>
         </div>
       </header>
@@ -153,68 +205,22 @@ export default function App() {
       <main className="stage">
         {mode === 'explore' ? (
           <>
-            <div className="view-switch">
-              <button
-                className={displayMode === 'atlas' && viewMode === 'normal' ? 'seg active' : 'seg'}
-                onClick={() => {
-                  setDisplayMode('atlas');
-                  setViewMode('normal');
-                }}
-              >
-                Atlas
-              </button>
-              <button
-                className={displayMode === 'image' ? 'seg active' : 'seg'}
-                onClick={() => {
-                  setDisplayMode('image');
-                  setViewMode('normal');
-                }}
-              >
-                Imagem
-              </button>
-              {(['section', 'xray'] as ViewMode[]).map((modeKey) => (
-                <button
-                  key={modeKey}
-                  className={displayMode === 'atlas' && viewMode === modeKey ? 'seg active' : 'seg'}
-                  onClick={() => {
-                    setDisplayMode('atlas');
-                    setViewMode(modeKey);
-                  }}
-                >
-                  {modeKey === 'section' ? 'Corte' : 'Raio-X'}
-                </button>
-              ))}
-            </div>
-            {displayMode === 'image' ? (
-              <AtlasPlate selected={selected} onSelect={selectPart} />
+            {viewMode === 'xray' ? (
+              <div className="xray-stage">
+                <img className="xray-image" src="/images/anatomy/X-Ray.png" alt="Raio-X do sistema respiratorio" />
+              </div>
             ) : (
-              <>
-                <RespiratoryScene
-                  selected={selected}
-                  hovered={hovered}
-                  onSelect={selectPart}
-                  onHover={setHovered}
-                  viewMode={viewMode}
-                  isolate={isolate}
-                  ghost={ghost}
-                  autoRotate={autoRotate}
-                  breathing={breathing}
-                />
-                <div className="hint-strip">
-                  <Move3D size={16} /> Arrastar para rodar
-                  <ScanLine size={16} /> Roda do rato para aproximar
-                </div>
-                <Toolbar
-                  autoRotate={autoRotate}
-                  setAutoRotate={setAutoRotate}
-                  isolate={isolate}
-                  setIsolate={setIsolate}
-                  ghost={ghost}
-                  setGhost={setGhost}
-                  breathing={breathing}
-                  setBreathing={setBreathing}
-                />
-              </>
+              <RespiratoryScene
+                selected={selected}
+                hovered={hovered}
+                onSelect={selectPart}
+                onHover={setHovered}
+                viewMode={viewMode}
+                isolate={isolate}
+                ghost={ghost}
+                autoRotate={autoRotate}
+                breathing={breathing}
+              />
             )}
           </>
         ) : (
@@ -226,19 +232,7 @@ export default function App() {
         {mode === 'explore' ? <InfoPanel active={active} /> : <ScorePanel placed={placed} mistakes={mistakes} feedback={feedback} onReset={resetExercise} dragging={dragging} />}
       </aside>
 
-      {mode === 'explore' && (
-        <section className="bottom-panel">
-          <div className="tabs">
-            <button className={bottomTab === 'real' ? 'tab active' : 'tab'} onClick={() => setBottomTab('real')}>
-              Imagem Real
-            </button>
-            <button className={bottomTab === 'compare' ? 'tab active' : 'tab'} onClick={() => setBottomTab('compare')}>
-              Comparar
-            </button>
-          </div>
-          {bottomTab === 'real' ? <RealWorld active={active} /> : <ComparePanel />}
-        </section>
-      )}
+
 
       <footer className="footer">
         <button onClick={() => navigate('/aviso-legal')}>Aviso Legal</button>
@@ -316,33 +310,41 @@ function InfoPanel({ active }: { active: ReturnType<typeof getStructure> }) {
   }
   return (
     <div className="info-stack">
-      <div className="title-card">
-        <img className="detail-figure" src={active.image} alt="" />
-        <span className="badge" style={{ background: active.color }} />
-        <h1>{active.label}</h1>
-        <p>{active.shortDescription}</p>
+      <div className="info-card main-info">
+        <div className="info-header">
+          <img className="info-thumb" src={active.image} alt="" />
+          <div className="info-title-area">
+            <span className="badge" style={{ background: active.color }} />
+            <h1>{active.label}</h1>
+            <p className="short-desc">{active.shortDescription}</p>
+          </div>
+        </div>
+        <div className="info-stats">
+          <div className="stat-row">
+            <div className="stat-item">
+              <small>Tamanho</small>
+              <strong>{active.size}</strong>
+            </div>
+            <div className="stat-item">
+              <small>Localizacao</small>
+              <strong>{active.location}</strong>
+            </div>
+          </div>
+          <div className="stat-item wide">
+            <small>Funcao principal</small>
+            <strong>{active.primaryFunction}</strong>
+          </div>
+        </div>
       </div>
-      <div className="data-card">
-        <Info size={18} />
-        <dl>
-          <dt>Tamanho</dt>
-          <dd>{active.size}</dd>
-          <dt>Localizacao</dt>
-          <dd>{active.location}</dd>
-          <dt>Funcao principal</dt>
-          <dd>{active.primaryFunction}</dd>
-        </dl>
-      </div>
-      <section className="text-card">
+
+      <section className="info-card notes-info">
         <h3>Notas Biologicas</h3>
         <p>{active.biologyNotes}</p>
       </section>
-      <section className="fun-card">
-        <Sparkles size={18} />
-        <div>
-          <h3>Facto divertido</h3>
-          <p>{active.funFact}</p>
-        </div>
+
+      <section className="info-card fun-info">
+        <Sparkles size={16} />
+        <p><strong>Facto divertido:</strong> {active.funFact}</p>
       </section>
     </div>
   );
@@ -379,42 +381,7 @@ function ComparePanel() {
   );
 }
 
-function AtlasPlate({ selected, onSelect }: { selected: PartId | null; onSelect: (id: PartId) => void }) {
-  const hotspots: Record<PartId, { left: string; top: string }> = {
-    nasal: { left: '47%', top: '14%' },
-    pharynx: { left: '50%', top: '23%' },
-    larynx: { left: '51%', top: '31%' },
-    trachea: { left: '51%', top: '42%' },
-    'main-bronchi': { left: '51%', top: '53%' },
-    bronchioles: { left: '56%', top: '66%' },
-    alveoli: { left: '62%', top: '74%' },
-    'right-lung': { left: '38%', top: '67%' },
-    'left-lung': { left: '64%', top: '67%' },
-    diaphragm: { left: '51%', top: '88%' }
-  };
 
-  return (
-    <div className="atlas-stage">
-      <div className="atlas-figure">
-        <img className="atlas-image" src="/images/anatomy/RespiratorySystem02.png" alt="Sistema respiratorio ilustrado" />
-        {structures.map((part) => (
-          <button
-            key={part.id}
-            className={selected === part.id ? 'atlas-hotspot active' : 'atlas-hotspot'}
-            style={{
-              left: hotspots[part.id].left,
-              top: hotspots[part.id].top,
-              borderColor: part.color
-            }}
-            onClick={() => onSelect(part.id)}
-            aria-label={part.label}
-            title={part.label}
-          />
-        ))}
-      </div>
-    </div>
-  );
-}
 
 function ExerciseBank({
   bank,
@@ -589,5 +556,51 @@ function LegalPageView({ page, onBack }: { page: LegalPage; onBack: () => void }
         <small>Ultima atualizacao: 14/05/2026 · Versao da aplicacao: 0.1.0</small>
       </article>
     </main>
+  );
+}
+
+function NavHelpDropdown() {
+  const [open, setOpen] = useState(false);
+  
+  return (
+    <div className="nav-help-container" onMouseEnter={() => setOpen(true)} onMouseLeave={() => setOpen(false)}>
+      <button 
+        className={open ? 'icon-button active' : 'icon-button'} 
+        aria-label="Ajuda de Navegacao"
+      >
+        <HelpCircle size={18} />
+      </button>
+      {open && (
+        <div className="nav-help-dropdown">
+          <div className="help-item">
+            <div className="icon-wrapper">
+              <RotateCcw size={18} />
+            </div>
+            <div>
+              <strong>Rodar</strong>
+              <span>Botão esquerdo e arrastar</span>
+            </div>
+          </div>
+          <div className="help-item">
+            <div className="icon-wrapper">
+              <Move3D size={18} />
+            </div>
+            <div>
+              <strong>Mover</strong>
+              <span>Botão direito e arrastar</span>
+            </div>
+          </div>
+          <div className="help-item">
+            <div className="icon-wrapper">
+              <ScanLine size={18} />
+            </div>
+            <div>
+              <strong>Aproximar</strong>
+              <span>Roda do rato (Scroll)</span>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
   );
 }

@@ -8,7 +8,7 @@ import { PartId, Structure, ViewMode, structures } from '../data/structures';
 interface SceneProps {
   selected: PartId | null;
   hovered: PartId | null;
-  onSelect: (id: PartId) => void;
+  onSelect: (id: PartId | null) => void;
   onHover: (id: PartId | null) => void;
   viewMode: ViewMode;
   isolate: boolean;
@@ -64,7 +64,7 @@ function FullTexturedModel({
   breathing: boolean;
 }) {
   const group = useRef<Group>(null);
-  const baseScale = 2.12;
+  const baseScale = 2.57;
   const { scene } = useGLTF('/models/RespiratorySystem.glb');
   const clone = useMemo(() => {
     const next = scene.clone(true);
@@ -109,7 +109,7 @@ function FullTexturedModel({
   });
 
   return (
-    <group ref={group} position={[0, 0.5, 0]} scale={baseScale}>
+    <group ref={group} position={[0, -0.05, 0]} scale={baseScale}>
       <primitive object={clone} />
       {structures.map((part) => {
         const isHovered = hovered === part.id;
@@ -217,7 +217,7 @@ function AnatomyPart({
       visible={visible}
       position={part.position}
       rotation={part.rotation ?? [0, 0, 0]}
-      scale={part.scale}
+      scale={part.scale * 1.21}
       onClick={handleClick}
     >
       <primitive object={clone} />
@@ -274,15 +274,20 @@ function SceneContent(props: SceneProps) {
           ))}
         </group>
       )}
-      <OrbitControls makeDefault enableDamping minDistance={2.6} maxDistance={8.5} target={[0, 0, 0]} />
+      <OrbitControls makeDefault enableDamping minDistance={1.8} maxDistance={9.4} target={[0, 0, 0]} />
     </>
   );
 }
 
 export default function RespiratoryScene(props: SceneProps) {
   return (
-    <Canvas camera={{ position: [0, 0.08, 5.9], fov: 36 }} shadows dpr={[1, 1.5]}>
-      <color attach="background" args={['#9f907a']} />
+    <Canvas
+      camera={{ position: [0, 0.08, 4.6], fov: 36 }}
+      shadows
+      dpr={[1, 1.5]}
+      onPointerMissed={() => props.onSelect(null)}
+    >
+      <color attach="background" args={['#000000']} />
       <Suspense
         fallback={
           <Html center className="loader">
