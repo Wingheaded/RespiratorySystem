@@ -31,15 +31,15 @@ function cloneWithMaterial(scene: Object3D, part: Structure, active: boolean, vi
       } else {
         const opacity = viewMode === 'xray' ? 0.28 : muted ? 0.14 : 0.96;
         mesh.material = new MeshStandardMaterial({
-        color: active ? '#f8fafc' : part.color,
-        emissive: viewMode === 'xray' || active ? part.color : '#000000',
-        emissiveIntensity: active ? 0.12 : viewMode === 'xray' ? 0.24 : 0,
-        roughness: 0.46,
-        metalness: 0,
-        side: DoubleSide,
-        transparent: opacity < 1,
-        opacity
-      });
+          color: active ? '#f8fafc' : part.color,
+          emissive: viewMode === 'xray' || active ? part.color : '#000000',
+          emissiveIntensity: active ? 0.12 : viewMode === 'xray' ? 0.24 : 0,
+          roughness: 0.46,
+          metalness: 0,
+          side: DoubleSide,
+          transparent: opacity < 1,
+          opacity
+        });
       }
       mesh.castShadow = true;
       mesh.receiveShadow = true;
@@ -87,16 +87,16 @@ function FullTexturedModel({
   const selectedLabel = structures.find((part) => part.id === selected)?.label;
   const hoveredPart = structures.find((part) => part.id === hovered);
   const hotspotPositions: Record<PartId, [number, number, number]> = {
-    nasal: [-0.050, 0.300, 0.000],
-    pharynx: [0.040, 0.230, 0.000],
-    larynx: [-0.015, 0.090, 0.050],
-    trachea: [0.000, -0.010, 0.065],
-    'main-bronchi': [0.020, -0.120, 0.080],
-    bronchioles: [0.100, -0.250, 0.100],
-    'right-lung': [-0.230, -0.160, 0.120],
-    'left-lung': [0.230, -0.220, 0.120],
-    alveoli: [0.150, -0.320, 0.120],
-    diaphragm: [-0.120, -0.430, 0.150]
+    nasal: [-0.090, 0.370, 0.000],
+    pharynx: [0.040, 0.300, 0.000],
+    larynx: [-0.015, 0.200, 0.050],
+    trachea: [0.030, 0.09, 0.065],
+    'main-bronchi': [-0.0, 0.01, 0.080],
+    bronchioles: [0.200, -0.250, 0.100],
+    'right-lung': [-0.200, -0.100, 0.120],
+    'left-lung': [0.230, -0.100, 0.120],
+    alveoli: [0.150, -0.190, 0.120],
+    diaphragm: [-0.180, -0.350, 0.150]
   };
 
   useFrame(({ clock }, delta) => {
@@ -113,22 +113,24 @@ function FullTexturedModel({
       <primitive object={clone} />
       {structures.map((part) => {
         const isHovered = hovered === part.id;
+        const isSelected = selected === part.id;
+        const isActive = isHovered || isSelected;
         const isRight = hotspotPositions[part.id][0] >= 0;
         const sideClass = isRight ? 'right' : 'left';
 
         return (
           <group key={part.id} position={hotspotPositions[part.id]}>
             <Html center zIndexRange={[100, 0]}>
-              <div 
+              <div
                 className="anatomy-hotspot-container"
                 onMouseEnter={() => onHover(part.id)}
                 onMouseLeave={() => onHover(null)}
                 onClick={() => onSelect(part.id)}
                 style={{ cursor: 'pointer' }}
               >
-                <div className={`anatomy-dot ${isHovered ? 'hovered' : ''}`}></div>
-                
-                {isHovered && (
+                <div className={`anatomy-dot ${isActive ? 'hovered' : ''}`}></div>
+
+                {isActive && (
                   <div className={`anatomy-card ${sideClass}`}>
                     <div className="anatomy-card-header">
                       <div className="anatomy-card-icon">
