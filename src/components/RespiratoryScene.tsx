@@ -29,11 +29,11 @@ function cloneWithMaterial(scene: Object3D, part: Structure, active: boolean, vi
           mesh.material = mesh.material.clone();
         }
       } else {
-        const opacity = viewMode === 'xray' ? 0.28 : muted ? 0.14 : 0.96;
+        const opacity = (viewMode as any) === 'xray' ? 0.28 : muted ? 0.14 : 0.96;
         mesh.material = new MeshStandardMaterial({
           color: active ? '#f8fafc' : part.color,
-          emissive: viewMode === 'xray' || active ? part.color : '#000000',
-          emissiveIntensity: active ? 0.12 : viewMode === 'xray' ? 0.24 : 0,
+          emissive: (viewMode as any) === 'xray' || active ? part.color : '#000000',
+          emissiveIntensity: active ? 0.12 : (viewMode as any) === 'xray' ? 0.24 : 0,
           roughness: 0.46,
           metalness: 0,
           side: DoubleSide,
@@ -243,7 +243,7 @@ function SceneContent(props: SceneProps) {
       <directionalLight position={[3.5, 5, 6]} intensity={2.8} castShadow />
       <directionalLight position={[-4, 1.6, 3]} intensity={1.2} color="#fff0e5" />
       <pointLight position={[0, 2.5, 4]} color="#ffffff" intensity={1.1} />
-      {props.viewMode === 'normal' ? (
+      {(props.viewMode as any) === 'normal' ? (
         <FullTexturedModel
           selected={props.selected}
           hovered={props.hovered}
@@ -254,12 +254,6 @@ function SceneContent(props: SceneProps) {
         />
       ) : (
         <group ref={root} position={[0, -0.55, 0]}>
-          {props.viewMode === 'section' && (
-            <mesh position={[0, -0.2, 0.02]}>
-              <boxGeometry args={[3.1, 4.6, 0.015]} />
-              <meshStandardMaterial color="#d4f4ff" opacity={0.12} transparent />
-            </mesh>
-          )}
           {structures.map((part) => (
             <AnatomyPart
               key={part.id}

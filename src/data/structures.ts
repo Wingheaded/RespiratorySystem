@@ -10,7 +10,7 @@ export type PartId =
   | 'left-lung'
   | 'diaphragm';
 
-export type ViewMode = 'normal' | 'xray';
+export type ViewMode = 'normal' | 'xray' | 'section';
 
 export interface Structure {
   id: PartId;
