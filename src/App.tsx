@@ -1,6 +1,8 @@
 import {
   AudioLines,
+  BookOpenCheck,
   Check,
+  ChevronRight,
   Eye,
   EyeOff,
   HelpCircle,
@@ -18,13 +20,24 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import ExerciseScene from './components/ExerciseScene';
 import RespiratoryScene from './components/RespiratoryScene';
 import { PartId, ViewMode, getStructure, structures } from './data/structures';
+import { QuizQuestion, generateQuizRound, validateQuizRound } from './data/quizGenerator';
 
-type Mode = 'explore' | 'exercise';
+type Mode = 'explore' | 'exercise' | 'quiz';
 type LegalPage = 'aviso-legal' | 'creditos' | 'privacidade';
 type ExercisePhase = 'parts' | 'review' | 'labels' | 'complete';
 type DragItem = { kind: 'part' | 'label'; id: PartId } | null;
 
 const shuffled = () => [...structures].sort(() => Math.random() - 0.5);
+
+function buildQuizRound() {
+  for (let attempt = 0; attempt < 4; attempt += 1) {
+    const round = generateQuizRound(structures, { seed: `${Date.now()}-${attempt}-${Math.random()}` });
+    if (validateQuizRound(round).ok) {
+      return round;
+    }
+  }
+  return generateQuizRound(structures);
+}
 
 function usePath() {
   const [path, setPath] = useState(window.location.pathname);
@@ -43,7 +56,7 @@ function usePath() {
 export default function App() {
   const { path, navigate } = usePath();
   const initialPart = new URLSearchParams(window.location.search).get('parte') as PartId | null;
-  const [mode, setMode] = useState<Mode>(path === '/exercicio' ? 'exercise' : 'explore');
+  const [mode, setMode] = useState<Mode>(path === '/exercicio' ? 'exercise' : path === '/quiz' ? 'quiz' : 'explore');
   const [selected, setSelected] = useState<PartId | null>(null);
 
   useEffect(() => {
@@ -69,6 +82,9 @@ export default function App() {
   const [feedback, setFeedback] = useState('Arrasta uma imagem para a zona correta.');
   const [mistakes, setMistakes] = useState<Record<PartId, number>>({} as Record<PartId, number>);
   const [muted, setMuted] = useState(false);
+  const [quizRound, setQuizRound] = useState<QuizQuestion[]>(buildQuizRound);
+  const [quizIndex, setQuizIndex] = useState(0);
+  const [quizAnswers, setQuizAnswers] = useState<Array<number | null>>(() => Array(5).fill(null));
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const lastAudioUrl = useRef<string | null>(null);
 
@@ -107,7 +123,7 @@ export default function App() {
   }, [hovered, selected, muted]);
 
   useEffect(() => {
-    setMode(path === '/exercicio' ? 'exercise' : 'explore');
+    setMode(path === '/exercicio' ? 'exercise' : path === '/quiz' ? 'quiz' : 'explore');
   }, [path]);
 
   const selectPart = (id: PartId | null) => {
@@ -120,7 +136,7 @@ export default function App() {
 
   const switchMode = (next: Mode) => {
     setMode(next);
-    navigate(next === 'exercise' ? '/exercicio' : '/explorar');
+    navigate(next === 'exercise' ? '/exercicio' : next === 'quiz' ? '/quiz' : '/explorar');
   };
 
   const resetExercise = () => {
@@ -151,7 +167,7 @@ export default function App() {
         setPlacedLabels(next);
         if (next.size === structures.length) {
           setExercisePhase('complete');
-          setFeedback('Sistema Respiratorio Reconstruido!');
+          setFeedback('Sistema Respiratório Reconstruído!');
         } else {
           setFeedback(`Certo! A etiqueta ${part?.label} ficou ligada ao local correto.`);
         }
@@ -160,7 +176,7 @@ export default function App() {
       setMistakes((prev) => ({ ...prev, [dragging.id]: (prev[dragging.id] ?? 0) + 1 }));
       setFeedback(
         dragging.kind === 'part'
-          ? 'Ainda nao e esse lugar. Observa a forma e tenta novamente.'
+          ? 'Ainda não é esse lugar. Observa a forma e tenta novamente.'
           : 'Essa etiqueta pertence a outra zona. Compara com o modelo montado.'
       );
     }
@@ -181,12 +197,32 @@ export default function App() {
     setFeedback('Agora arrasta os nomes para as etiquetas corretas.');
   };
 
+  const answerQuiz = (optionIndex: number) => {
+    if (quizIndex >= quizRound.length || quizAnswers[quizIndex] !== null) return;
+    setQuizAnswers((prev) => prev.map((answer, index) => (index === quizIndex ? optionIndex : answer)));
+  };
+
+  const nextQuizQuestion = () => {
+    setQuizIndex((current) => Math.min(current + 1, quizRound.length));
+  };
+
+  const restartQuiz = () => {
+    setQuizRound(buildQuizRound());
+    setQuizIndex(0);
+    setQuizAnswers(Array(5).fill(null));
+  };
+
+  const quizScore = quizRound.reduce(
+    (score, question, index) => score + (quizAnswers[index] === question.correctIndex ? 1 : 0),
+    0
+  );
+
   if (['/aviso-legal', '/creditos', '/privacidade'].includes(path)) {
     return <LegalPageView page={legal} onBack={() => navigate('/explorar')} />;
   }
 
   return (
-    <div className="app-shell">
+    <div className={`app-shell ${mode}-mode`}>
       <header className="topbar">
         <div className="topbar-left">
           <button className="brand-logo" onClick={() => navigate('/explorar')} aria-label="Ir para explorar">
@@ -221,7 +257,10 @@ export default function App() {
               Explorar
             </button>
             <button className={mode === 'exercise' ? 'seg active' : 'seg'} onClick={() => switchMode('exercise')}>
-              Exercicio
+              Exercício
+            </button>
+            <button className={mode === 'quiz' ? 'seg active' : 'seg'} onClick={() => switchMode('quiz')}>
+              Quiz
             </button>
           </div>
           <button 
@@ -237,7 +276,7 @@ export default function App() {
       <aside className="left-panel">
         {mode === 'explore' ? (
           <>
-            <PanelTitle title="Sistema Respiratorio" subtitle="10 estruturas principais" />
+            <PanelTitle title="Sistema Respiratório" subtitle="10 estruturas principais" />
             <div className="part-list">
               {structures.map((part) => (
                 <button
@@ -251,7 +290,7 @@ export default function App() {
               ))}
             </div>
           </>
-        ) : (
+        ) : mode === 'exercise' ? (
           <ExerciseBank
             bank={bank}
             phase={exercisePhase}
@@ -259,6 +298,13 @@ export default function App() {
             placedLabels={placedLabels}
             dragging={dragging}
             onDrag={setDragging}
+          />
+        ) : (
+          <QuizNavigator
+            questions={quizRound}
+            answers={quizAnswers}
+            currentIndex={quizIndex}
+            onSelect={setQuizIndex}
           />
         )}
       </aside>
@@ -268,7 +314,7 @@ export default function App() {
           <>
             {viewMode === 'xray' ? (
               <div className="xray-stage">
-                <img className="xray-image" src="/images/anatomy/X-Ray.png" alt="Raio-X do sistema respiratorio" />
+                <img className="xray-image" src="/images/anatomy/X-Ray.png" alt="Raio-X do sistema respiratório" />
               </div>
             ) : (
               <RespiratoryScene
@@ -285,7 +331,7 @@ export default function App() {
               />
             )}
           </>
-        ) : (
+        ) : mode === 'exercise' ? (
           <ExerciseScene
             phase={exercisePhase}
             placedParts={placedParts}
@@ -295,13 +341,23 @@ export default function App() {
             onDrop={attemptDrop}
             onSelectTarget={selectExerciseTarget}
           />
+        ) : (
+          <QuizStage
+            questions={quizRound}
+            currentIndex={quizIndex}
+            answers={quizAnswers}
+            score={quizScore}
+            onAnswer={answerQuiz}
+            onNext={nextQuizQuestion}
+            onRestart={restartQuiz}
+          />
         )}
       </main>
 
       <aside className="right-panel">
         {mode === 'explore' ? (
           <InfoPanel active={active} />
-        ) : (
+        ) : mode === 'exercise' ? (
           <ScorePanel
             phase={exercisePhase}
             placedParts={placedParts}
@@ -312,6 +368,14 @@ export default function App() {
             onContinue={continueToLabels}
             dragging={dragging}
           />
+        ) : (
+          <QuizSidePanel
+            questions={quizRound}
+            answers={quizAnswers}
+            currentIndex={quizIndex}
+            score={quizScore}
+            onRestart={restartQuiz}
+          />
         )}
       </aside>
 
@@ -320,7 +384,7 @@ export default function App() {
       <footer className="footer">
         <button onClick={() => navigate('/aviso-legal')}>Aviso Legal</button>
         <span>·</span>
-        <button onClick={() => navigate('/creditos')}>Creditos</button>
+        <button onClick={() => navigate('/creditos')}>Créditos</button>
         <span>·</span>
         <button onClick={() => navigate('/privacidade')}>Privacidade</button>
       </footer>
@@ -389,7 +453,7 @@ function Toolbar({
 
 function InfoPanel({ active }: { active: ReturnType<typeof getStructure> }) {
   if (!active) {
-    return <div className="empty-card">Clica numa parte do sistema respiratorio para comecares.</div>;
+    return <div className="empty-card">Clica numa parte do sistema respiratório para começares.</div>;
   }
   return (
     <div className="info-stack">
@@ -409,19 +473,19 @@ function InfoPanel({ active }: { active: ReturnType<typeof getStructure> }) {
               <strong>{active.size}</strong>
             </div>
             <div className="stat-item">
-              <small>Localizacao</small>
+              <small>Localização</small>
               <strong>{active.location}</strong>
             </div>
           </div>
           <div className="stat-item wide">
-            <small>Funcao principal</small>
+            <small>Função principal</small>
             <strong>{active.primaryFunction}</strong>
           </div>
         </div>
       </div>
 
       <section className="info-card notes-info">
-        <h3>Notas Biologicas</h3>
+        <h3>Notas Biológicas</h3>
         <p>{active.biologyNotes}</p>
       </section>
 
@@ -438,9 +502,9 @@ function RealWorld({ active }: { active: ReturnType<typeof getStructure> }) {
     <div className="real-grid">
       <img src={active?.image ?? '/images/anatomy/RespiratorySystem02.png'} alt="" />
       <div>
-        <strong>{active ? active.label : 'Sistema respiratorio'}</strong>
+        <strong>{active ? active.label : 'Sistema respiratório'}</strong>
         <p>
-          Imagem de referencia em estilo atlas para distinguir melhor a forma e os detalhes visuais desta estrutura.
+          Imagem de referência em estilo atlas para distinguir melhor a forma e os detalhes visuais desta estrutura.
         </p>
       </div>
     </div>
@@ -452,13 +516,13 @@ function ComparePanel() {
     <div className="compare-grid">
       <div className="compare-item healthy">
         <img src="/images/anatomy/RightLung.png" alt="" />
-        <strong>Pulmao saudavel</strong>
-        <p>Cor mais clara, tecido elastico e boa capacidade de expansao.</p>
+        <strong>Pulmão saudável</strong>
+        <p>Cor mais clara, tecido elástico e boa capacidade de expansão.</p>
       </div>
       <div className="compare-item smoker">
         <img src="/images/anatomy/LeftLung.png" alt="" />
-        <strong>Pulmao de fumador</strong>
-        <p>Representacao educativa: manchas escuras, menor elasticidade e trocas gasosas menos eficientes.</p>
+        <strong>Pulmão de fumador</strong>
+        <p>Representação educativa: manchas escuras, menor elasticidade e trocas gasosas menos eficientes.</p>
       </div>
     </div>
   );
@@ -524,7 +588,7 @@ function ExerciseBank({
             <Check size={18} />
             <span>
               {phase === 'complete'
-                ? 'Exercicio completo.'
+                ? 'Exercício completo.'
                 : phase === 'review'
                   ? 'Imagens colocadas corretamente.'
                   : 'Tudo colocado. Passa para as etiquetas.'}
@@ -567,12 +631,12 @@ function ScorePanel({
         <div className="progress">
           <span style={{ width: `${(score / structures.length) * 100}%` }} />
         </div>
-        <p aria-live="polite">{complete ? 'Sistema Respiratorio Reconstruido!' : feedback}</p>
+        <p aria-live="polite">{complete ? 'Sistema Respiratório Reconstruído!' : feedback}</p>
       </div>
       <div className="data-card">
         <dl>
           <dt>Fase</dt>
-          <dd>{phase === 'parts' ? 'Imagens' : phase === 'review' ? 'Revisao' : phase === 'labels' ? 'Etiquetas' : 'Completo'}</dd>
+          <dd>{phase === 'parts' ? 'Imagens' : phase === 'review' ? 'Revisão' : phase === 'labels' ? 'Etiquetas' : 'Completo'}</dd>
           <dt>Erros</dt>
           <dd>{totalMistakes}</dd>
           <dt>Hint</dt>
@@ -582,7 +646,207 @@ function ScorePanel({
       {phase === 'review' && (
         <button className="primary-action" onClick={onContinue}>Continuar para nomes</button>
       )}
-      <button className="primary-action" onClick={onReset}>Reiniciar exercicio</button>
+      <button className="primary-action" onClick={onReset}>Reiniciar exercício</button>
+    </div>
+  );
+}
+
+function QuizNavigator({
+  questions,
+  answers,
+  currentIndex,
+  onSelect
+}: {
+  questions: QuizQuestion[];
+  answers: Array<number | null>;
+  currentIndex: number;
+  onSelect: (index: number) => void;
+}) {
+  return (
+    <>
+      <PanelTitle title="Quiz Respiratório" subtitle="5 perguntas mistas" />
+      <div className="quiz-nav-list">
+        {questions.map((question, index) => {
+          const answered = answers[index] !== null;
+          const correct = answered && answers[index] === question.correctIndex;
+          const locked = !answered && index > currentIndex;
+          return (
+            <button
+              key={question.id}
+              className={[
+                'quiz-nav-row',
+                index === currentIndex ? 'active' : '',
+                answered ? (correct ? 'correct' : 'incorrect') : '',
+                locked ? 'locked' : ''
+              ].join(' ')}
+              disabled={locked}
+              onClick={() => onSelect(index)}
+            >
+              <span>{index + 1}</span>
+              <div>
+                <strong>Pergunta {index + 1}</strong>
+                <small>
+                  {question.skill === 'recall'
+                    ? 'Memória'
+                    : question.skill === 'application'
+                      ? 'Aplicação'
+                      : 'Compreensão'}
+                </small>
+              </div>
+              {answered && <Check size={16} />}
+            </button>
+          );
+        })}
+      </div>
+    </>
+  );
+}
+
+function QuizStage({
+  questions,
+  currentIndex,
+  answers,
+  score,
+  onAnswer,
+  onNext,
+  onRestart
+}: {
+  questions: QuizQuestion[];
+  currentIndex: number;
+  answers: Array<number | null>;
+  score: number;
+  onAnswer: (optionIndex: number) => void;
+  onNext: () => void;
+  onRestart: () => void;
+}) {
+  const complete = currentIndex >= questions.length;
+  const question = questions[currentIndex];
+  const selectedAnswer = answers[currentIndex];
+
+  if (complete) {
+    return (
+      <div className="quiz-stage">
+        <div className="quiz-result">
+          <BookOpenCheck size={42} />
+          <small>Resultado final</small>
+          <h1>{score} / {questions.length}</h1>
+          <p>
+            {score >= 4
+              ? 'Excelente trabalho. Já reconheces bem as estruturas principais do sistema respiratório.'
+              : score >= 3
+                ? 'Bom progresso. Revê as explicações e tenta outra ronda para consolidar.'
+                : 'Continua a praticar. Cada explicação ajuda-te a ligar a estrutura à função.'}
+          </p>
+          <button className="primary-action quiz-action" onClick={onRestart}>
+            Gerar novo quiz
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  const answered = selectedAnswer !== null;
+
+  return (
+    <div className="quiz-stage">
+      <div className="quiz-card">
+        <div className="quiz-kicker">
+          <span>Pergunta {currentIndex + 1} de {questions.length}</span>
+          <strong>
+            {question.skill === 'recall'
+              ? 'Memória'
+              : question.skill === 'application'
+                ? 'Aplicação'
+                : 'Compreensão'}
+          </strong>
+        </div>
+        <h1>{question.prompt}</h1>
+        <div className="quiz-options">
+          {question.options.map((option, index) => {
+            const isCorrect = index === question.correctIndex;
+            const isSelected = selectedAnswer === index;
+            return (
+              <button
+                key={option}
+                className={[
+                  'quiz-option',
+                  answered && isCorrect ? 'correct' : '',
+                  answered && isSelected && !isCorrect ? 'incorrect' : '',
+                  isSelected ? 'selected' : ''
+                ].join(' ')}
+                disabled={answered}
+                onClick={() => onAnswer(index)}
+              >
+                <span>{String.fromCharCode(65 + index)}</span>
+                <strong>{option}</strong>
+              </button>
+            );
+          })}
+        </div>
+        {answered && (
+          <div className={selectedAnswer === question.correctIndex ? 'quiz-feedback correct' : 'quiz-feedback incorrect'}>
+            <strong>{selectedAnswer === question.correctIndex ? 'Correto!' : 'Ainda não.'}</strong>
+            <p>{question.explanation}</p>
+            <button className="primary-action quiz-action" onClick={onNext}>
+              {currentIndex === questions.length - 1 ? 'Ver resultado' : 'Seguinte'}
+              <ChevronRight size={18} />
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function QuizSidePanel({
+  questions,
+  answers,
+  currentIndex,
+  score,
+  onRestart
+}: {
+  questions: QuizQuestion[];
+  answers: Array<number | null>;
+  currentIndex: number;
+  score: number;
+  onRestart: () => void;
+}) {
+  const complete = currentIndex >= questions.length;
+  const answeredCount = answers.filter((answer) => answer !== null).length;
+  const activeQuestion = questions[Math.min(currentIndex, questions.length - 1)];
+  const activeStructure = getStructure(activeQuestion?.structureId ?? null);
+
+  return (
+    <div className="info-stack">
+      <div className="title-card quiz-score-card">
+        <small>Quiz</small>
+        <h1>{score} corretas</h1>
+        <div className="progress">
+          <span style={{ width: `${(answeredCount / questions.length) * 100}%` }} />
+        </div>
+        <p>{complete ? 'Ronda terminada.' : `${answeredCount} de ${questions.length} respondidas.`}</p>
+      </div>
+
+      {activeStructure && (
+        <section className="info-card quiz-source-card">
+          <img src={activeStructure.image} alt="" />
+          <div>
+            <small>Fonte da pergunta</small>
+            <h3>{activeStructure.label}</h3>
+            <p>{activeStructure.shortDescription}</p>
+          </div>
+        </section>
+      )}
+
+      <section className="info-card quiz-agent-card">
+        <h3>Como o quiz foi criado</h3>
+        <p>
+          As perguntas são geradas a partir dos factos do modo Explorar: localização, função, notas biológicas e
+          descrições curtas.
+        </p>
+      </section>
+
+      <button className="primary-action" onClick={onRestart}>Nova ronda</button>
     </div>
   );
 }
@@ -593,13 +857,13 @@ function Disclaimer({ onAccept, onLegal }: { onAccept: () => void; onLegal: () =
       <div className="modal">
         <h2>Bem-vindo(a) ao Corpus3D</h2>
         <p>
-          Esta aplicacao destina-se a alunos dos 11 aos 14 anos e tem fins exclusivamente educativos. Os modelos 3D e imagens
-          ajudam a aprender anatomia, mas nao substituem aconselhamento medico.
+          Esta aplicação destina-se a alunos dos 11 aos 14 anos e tem fins exclusivamente educativos. Os modelos 3D e imagens
+          ajudam a aprender anatomia, mas não substituem aconselhamento médico.
         </p>
-        <p>Algumas comparacoes mostram efeitos do tabagismo nos pulmoes com objetivo educativo.</p>
+        <p>Algumas comparações mostram efeitos do tabagismo nos pulmões com objetivo educativo.</p>
         <div className="modal-actions">
           <button className="secondary-action" onClick={onLegal}>Ler aviso completo</button>
-          <button className="primary-action" onClick={onAccept}>Compreendi, vamos comecar</button>
+          <button className="primary-action" onClick={onAccept}>Compreendi, vamos começar</button>
         </div>
       </div>
     </div>
@@ -612,15 +876,15 @@ function LegalPageView({ page, onBack }: { page: LegalPage; onBack: () => void }
       return {
         title: 'Aviso Legal',
         body: [
-          'O Corpus3D e uma aplicacao educativa para alunos do 2.º e 3.º ciclos do ensino basico.',
-          'A informacao apresentada nao constitui aconselhamento medico, diagnostico ou tratamento.',
+          'O Corpus3D é uma aplicação educativa para alunos do 2.º e 3.º ciclos do ensino básico.',
+          'A informação apresentada não constitui aconselhamento médico, diagnóstico ou tratamento.',
           'Para questoes de saude, consulta sempre um profissional qualificado.'
         ]
       };
     }
     if (page === 'creditos') {
       return {
-        title: 'Creditos e Atribuicoes',
+        title: 'Créditos e Atribuições',
         body: [
           <span key="credits">
             Modelos 3D: gerados por IA para este projeto por{' '}
@@ -634,10 +898,10 @@ function LegalPageView({ page, onBack }: { page: LegalPage; onBack: () => void }
       };
     }
     return {
-      title: 'Politica de Privacidade',
+      title: 'Política de Privacidade',
       body: [
-        'Esta aplicacao nao recolhe, armazena nem transmite dados pessoais.',
-        'As preferencias de utilizacao ficam apenas no armazenamento local do navegador.',
+        'Esta aplicação não recolhe, armazena nem transmite dados pessoais.',
+        'As preferências de utilização ficam apenas no armazenamento local do navegador.',
         'O modo offline guarda ficheiros educativos no dispositivo, sem dados pessoais.'
       ]
     };
@@ -653,7 +917,7 @@ function LegalPageView({ page, onBack }: { page: LegalPage; onBack: () => void }
         {content.body.map((paragraph, idx) => (
           <p key={idx}>{paragraph}</p>
         ))}
-        <small>Ultima atualizacao: 14/05/2026 · Versao da aplicacao: 0.1.0</small>
+        <small>Última atualização: 14/05/2026 · Versão da aplicação: 0.1.0</small>
       </article>
     </main>
   );
@@ -666,7 +930,7 @@ function NavHelpDropdown() {
     <div className="nav-help-container" onMouseEnter={() => setOpen(true)} onMouseLeave={() => setOpen(false)}>
       <button 
         className={open ? 'icon-button active' : 'icon-button'} 
-        aria-label="Ajuda de Navegacao"
+        aria-label="Ajuda de Navegação"
       >
         <HelpCircle size={18} />
       </button>
